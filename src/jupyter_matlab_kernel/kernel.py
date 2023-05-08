@@ -29,6 +29,33 @@ class MATLABConnectionError(Exception):
         super().__init__(message)
 
 
+def is_jupyter_testing_enabled():
+    """Returns 'true' if MWI_JUPYTER_TEST environment variable is set to 'true'"""
+
+    return os.environ.get("MWI_JUPYTER_TEST", "false") == "true"
+
+
+def matlab_proxy_server_for_testing():
+    """Only used for testing purposes. Gets the matlab-proxy server configuration
+    from environment variables (set by tests) and mocks the notebook server"""
+
+    import matlab_proxy.util.mwi.environment_variables as mwi_env
+
+    matlab_proxy_pid = os.environ["SERVER_PROCESS_ID"]
+
+    def mock_nb_server():
+        nb_server = {
+            "secure": False,
+            "port": os.environ[mwi_env.get_env_name_app_port()],
+            "base_url": os.environ[mwi_env.get_env_name_base_url()],
+            "pid": matlab_proxy_pid,
+            "token": "",
+        }
+        yield nb_server
+
+    return list(mock_nb_server()), matlab_proxy_pid
+
+
 def start_matlab_proxy():
     """
     Start matlab-proxy registered with the jupyter server which started the
@@ -47,21 +74,27 @@ def start_matlab_proxy():
 
     nb_server_list = []
 
-    # The matlab-proxy server, if running, could have been started by either
-    # "jupyter_server" or "notebook" package.
-    try:
-        from jupyter_server import serverapp
+    # If jupyter testing is enabled, then a standalone matlab-proxy server would be
+    # launched by the tests and kernel would expect the configurations of this matlab-proxy
+    # server which is provided through environment variable to 'matlab_proxy_server_for_testing'
+    if is_jupyter_testing_enabled():
+        nb_server_list, jupyter_server_pid = matlab_proxy_server_for_testing()
+    else:
+        # The matlab-proxy server, if running, could have been started by either
+        # "jupyter_server" or "notebook" package.
+        try:
+            from jupyter_server import serverapp
 
-        nb_server_list += list(serverapp.list_running_servers())
+            nb_server_list += list(serverapp.list_running_servers())
 
-        from notebook import notebookapp
+            from notebook import notebookapp
 
-        nb_server_list += list(notebookapp.list_running_servers())
-    except ImportError:
-        pass
+            nb_server_list += list(notebookapp.list_running_servers())
+        except ImportError:
+            pass
 
-    # Use parent process id of the kernel to filter Jupyter Server from the list.
-    jupyter_server_pid = os.getppid()
+        # Use parent process id of the kernel to filter Jupyter Server from the list.
+        jupyter_server_pid = os.getppid()
 
     # On Windows platforms using venv/virtualenv an intermediate python process spaws the kernel.
     # jupyter_server ---spawns---> intermediate_process ---spawns---> jupyter_matlab_kernel

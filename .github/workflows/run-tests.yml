@@ -41,11 +41,11 @@ jobs:
 
       - name: Test with pytest
         if: ${{ matrix.python-version != env.code-cov-py }}
-        run: python3 -m pytest
+        run: python3 -m pytest tests/unit
 
       - name: Test with pytest and get code coverage for Python ${{env.code-cov-py}}
         if: ${{matrix.python-version == env.code-cov-py }}
-        run: python3 -m pytest --cov --cov-report=xml
+        run: python3 -m pytest --cov --cov-report=xml tests/unit
 
       - name: Persist coverage data to be uploaded if all jobs are successful.
         if: ${{matrix.python-version == env.code-cov-py }}
