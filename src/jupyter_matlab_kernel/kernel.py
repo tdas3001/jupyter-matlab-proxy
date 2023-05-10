@@ -50,6 +50,7 @@ def matlab_proxy_server_for_testing():
             "base_url": os.environ[mwi_env.get_env_name_base_url()],
             "pid": matlab_proxy_pid,
             "token": "",
+            "password": False,
         }
         yield nb_server
 
