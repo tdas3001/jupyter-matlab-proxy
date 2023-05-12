@@ -124,6 +124,7 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
         )
         self.assertIn('image/png', output_msgs[-1]["content"]["data"], "No figure was generated in output")
 
+    # ---- Utility Functions ----
     def run_code(self, code, timeout=30):
         """Runs code in Jupyter notebook cell"""
 
