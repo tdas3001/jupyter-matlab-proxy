@@ -35,29 +35,26 @@ def is_jupyter_testing_enabled():
     return os.environ.get("MWI_JUPYTER_TEST", "false") == "true"
 
 
-def matlab_proxy_server_for_testing():
+def start_matlab_proxy_for_testing():
     """Only used for testing purposes. Gets the matlab-proxy server configuration
-    from environment variables (set by tests) and mocks the notebook server"""
+    from environment variables (set by tests) and mocks the 'start_matlab_proxy' function
+    """
 
     import matlab_proxy.util.mwi.environment_variables as mwi_env
 
-    matlab_proxy_pid = os.environ["SERVER_PROCESS_ID"]
-
-    def mock_nb_server():
-        nb_server = {
-            "secure": False,
-            "port": os.environ[mwi_env.get_env_name_app_port()],
-            "base_url": os.environ[mwi_env.get_env_name_base_url()],
-            "pid": matlab_proxy_pid,
-            "token": "",
-            "password": False,
-        }
-        yield nb_server
-
-    return list(mock_nb_server()), matlab_proxy_pid
+    matlab_proxy_base_url = os.environ[mwi_env.get_env_name_base_url()]
+    url = "{protocol}://localhost:{port}{base_url}".format(
+        protocol="http",
+        port=os.environ[mwi_env.get_env_name_app_port()],
+        base_url=matlab_proxy_base_url,
+    )
+    headers = {
+        "Authorization": f"token ",
+    }
+    return url, matlab_proxy_base_url, headers
 
 
-def start_matlab_proxy():
+def start_matlab_proxy(test=False):
     """
     Start matlab-proxy registered with the jupyter server which started the
     current kernel process.
@@ -73,29 +70,29 @@ def start_matlab_proxy():
             headers (dict): HTTP headers required while sending HTTP requests to matlab-proxy
     """
 
-    nb_server_list = []
-
     # If jupyter testing is enabled, then a standalone matlab-proxy server would be
     # launched by the tests and kernel would expect the configurations of this matlab-proxy
-    # server which is provided through environment variable to 'matlab_proxy_server_for_testing'
-    if is_jupyter_testing_enabled():
-        nb_server_list, jupyter_server_pid = matlab_proxy_server_for_testing()
-    else:
-        # The matlab-proxy server, if running, could have been started by either
-        # "jupyter_server" or "notebook" package.
-        try:
-            from jupyter_server import serverapp
+    # server which is provided through environment variables to 'start_matlab_proxy_for_testing'
+    if test:
+        return start_matlab_proxy_for_testing()
 
-            nb_server_list += list(serverapp.list_running_servers())
+    nb_server_list = []
 
-            from notebook import notebookapp
+    # The matlab-proxy server, if running, could have been started by either
+    # "jupyter_server" or "notebook" package.
+    try:
+        from jupyter_server import serverapp
 
-            nb_server_list += list(notebookapp.list_running_servers())
-        except ImportError:
-            pass
+        nb_server_list += list(serverapp.list_running_servers())
 
-        # Use parent process id of the kernel to filter Jupyter Server from the list.
-        jupyter_server_pid = os.getppid()
+        from notebook import notebookapp
+
+        nb_server_list += list(notebookapp.list_running_servers())
+    except ImportError:
+        pass
+
+    # Use parent process id of the kernel to filter Jupyter Server from the list.
+    jupyter_server_pid = os.getppid()
 
     # On Windows platforms using venv/virtualenv an intermediate python process spaws the kernel.
     # jupyter_server ---spawns---> intermediate_process ---spawns---> jupyter_matlab_kernel
@@ -210,8 +207,10 @@ class MATLABKernel(ipykernel.kernelbase.Kernel):
         # Call superclass constructor to initialize ipykernel infrastructure
         super(MATLABKernel, self).__init__(*args, **kwargs)
         try:
-            # Start matlab-proxy using the jupyter-matlab-proxy registered endpoint
-            self.murl, self.server_base_url, self.headers = start_matlab_proxy()
+            # Start matlab-proxy using the jupyter-matlab-proxy registered endpoint.
+            self.murl, self.server_base_url, self.headers = start_matlab_proxy(
+                test=is_jupyter_testing_enabled()
+            )
             (
                 self.is_matlab_licensed,
                 self.matlab_status,
