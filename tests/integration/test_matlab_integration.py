@@ -1,50 +1,178 @@
 # Copyright 2023 The MathWorks, Inc.
 
+import asyncio
 import os
-import sys
-import unittest
 
-from matlab_kernel_tests import MATLABKernelTests
+import jupyter_kernel_test
+import tests.integration.utils as utils
 
 
-class TestMATLABIntegration(MATLABKernelTests):
-    """Test class for integration testing of Jupyter Notebook integration
-    in presence of MATLAB"""
+class MATLABKernelTests(jupyter_kernel_test.KernelTests):
+    """Base Class for MATLAB Kernel testing with jupyter-kernel-test package"""
 
-    def test_matlab_kernel_stderr(self):
-        """Validates if MATLAB Kernel errors out correctly"""
+    # The name identifying an installed kernel to run the tests against
+    kernel_name = "jupyter_matlab_kernel"
 
-        reply, output_msgs = self.run_code(code='error("expected error")')
-        self.assertEqual(
-            self.get_output_header_msg_type(output_msgs),
-            "stream",
-            f"The output is:\n{self.get_output(output_msgs)}",
+    # language_info.name in a kernel_info_reply should match this
+    language_name = "matlab"
+
+    # Throws error in cell output
+    code_stderr = "error('expected error')"
+
+    # Prints message in cell output
+    code_hello_world = "disp('hello, world')"
+
+    # Executes code and validates output
+    code_execute_result = [
+        {
+            "code": "a = 1;a = a + 1",
+            "result": "a = \n   2"
+        }
+    ]
+
+    # Tests tab completion
+    completion_samples = [
+        {
+            "text": "func",
+            "matches": [
+                "func2str",
+                "function",
+                "function_handle",
+                "functionhintsfunc",
+                "functions",
+                "functiontests",
+            ]
+        }
+    ]
+
+    # Clears the cell output area
+    code_clear_output = "clc"
+
+    @classmethod
+    def setUpClass(cls):
+        # Get event loop to start matlab-proxy in background
+        cls.loop = asyncio.get_event_loop()
+
+        # # Store the matlab proxy logs in os.pipe for testing
+        # os.pipe2 is not supported in Mac and Windows systems
+        from matlab_proxy.util import system
+
+        cls.dpipe = os.pipe2(os.O_NONBLOCK) if system.is_linux() else os.pipe()
+
+        # Select a random free port to serve matlab proxy for testing
+        cls.mwi_app_port = utils.get_random_free_port()
+        cls.mwi_base_url = "/matlab-test"
+
+        # Environment variables to launch matlab proxy
+        cls.input_env = {
+            "MWI_JUPYTER_TEST": "true",
+            "MWI_APP_PORT": cls.mwi_app_port,
+            "MWI_BASE_URL": cls.mwi_base_url,
+        }
+
+        # Start matlab-proxy-app
+        cls.proc = cls.loop.run_until_complete(
+            utils.start_matlab_proxy_app(out=cls.dpipe[1], input_env=cls.input_env)
         )
-        self.assertEqual(self.get_output_msg_name(output_msgs), "stderr")
-        self.assertEqual(self.get_output(output_msgs), "expected error")
+        # Wait for matlab-proxy to be up and running
+        utils.wait_matlab_proxy_up(cls.mwi_app_port, cls.mwi_base_url)
+
+        # Update the OS environment variables such as app port, base url etc.
+        # so that they can be used by MATLAB Kernel to obtain MATLAB
+        os.environ.update(cls.input_env)
+        super().setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        cls.proc.terminate()
+        cls.loop.run_until_complete(cls.proc.wait())
+
+        # Unset the environment variables based on the configuration
+        for key in cls.input_env.keys():
+            os.unsetenv(key)
+
+    def setUp(self):
+        self.flush_channels()
 
     def test_matlab_kernel_ver(self):
         """Validates if 'ver' command executes successfully in MATLAB Kernel"""
 
-        reply, output_msgs = self.run_code(code="ver", timeout=10)
+        reply, output_msgs = self.run_code(code="ver")
         self.assertEqual(self.get_output_header_msg_type(output_msgs), "stream")
         self.assertEqual(
             self.get_output_msg_name(output_msgs),
             "stdout",
-            f"The output is:\n{self.get_output(output_msgs)}",
+            f"The output is:\n{self.get_output_text(output_msgs)}",
         )
-        self.assertIn("MATLAB", self.get_output(output_msgs))
+        self.assertIn("MATLAB", self.get_output_text(output_msgs))
 
     def test_matlab_kernel_simple_addition(self):
         """Validates if 'TestSimpleAddition' MATLAB test file executes without any failures"""
+
         test_filepath = os.path.join(os.path.dirname(__file__), "TestSimpleAddition.m")
         self.validate_matlab_test(test_filepath)
 
+    def test_matlab_kernel_peaks(self):
+        """Validates if 'peaks' command plots a figure in jupyter cell output"""
 
-if __name__ == "__main__":
-    suite = unittest.TestSuite()
-    loader = unittest.TestLoader()
-    runner = unittest.TextTestRunner(verbosity=2)
-    suite.addTest(loader.loadTestsFromTestCase(TestMATLABIntegration))
-    result = runner.run(suite)
-    sys.exit(not result.wasSuccessful())
+        reply, output_msgs = self.run_code(code='peaks')
+        self.assertEqual(
+            self.get_output_header_msg_type(output_msgs),
+            "execute_result",
+            f"The expected output header is 'execute_result'",
+        )
+        self.assertIn('image/png', output_msgs[-1]["content"]["data"], "No figure was generated in output")
+
+    def run_code(self, code, timeout=30):
+        """Runs code in Jupyter notebook cell"""
+
+        reply, output_msgs = self.execute_helper(code=code, timeout=timeout)
+        return reply, output_msgs
+
+    def get_output_header_msg_type(self, output_msgs):
+        """Gets the Jupyter notebook cell output header message type
+        Returns 'stream', 'execute_result' etc."""
+
+        return output_msgs[-1]["header"]["msg_type"]
+
+    def get_output_msg_name(self, output_msgs):
+        """Gets the Jupyter notebook cell output message name
+        Applicable for 'stream' output header
+        Returns 'stdout', 'stderr' etc."""
+
+        return output_msgs[-1]["content"]["name"]
+
+    def get_output_text(self, output_msgs):
+        """Gets output text of Jupyter notebook cell"""
+
+        if self.get_output_header_msg_type(output_msgs) == "stream":
+            output = [
+                output_msgs[i]["content"]["text"]
+                for i in range(len(output_msgs))
+                if "text" in output_msgs[i]["content"]
+            ]
+            output = "\n".join(output)
+            return output
+        elif self.get_output_header_msg_type(output_msgs) == "execute_result":
+            output = [
+                output_msgs[i]["content"]["data"]["text/html"]
+                for i in range(len(output_msgs))
+                if "data" in output_msgs[i]["content"]
+            ]
+            output = "\n".join(output)
+            return output
+
+    def validate_matlab_test(self, test_filepath):
+        """Runs MATLAB test given the test file path. Validates if all the test
+        points passed."""
+
+        reply, output_msgs = self.run_code(
+            code=f"assertSuccess(runtests('{test_filepath}'))"
+        )
+        self.assertEqual(
+            self.get_output_header_msg_type(output_msgs),
+            "execute_result",
+            self.get_output_text(output_msgs),
+        )
+        self.assertIn("0 Failed, 0 Incomplete", self.get_output_text(output_msgs))
