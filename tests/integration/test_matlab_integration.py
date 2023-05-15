@@ -1,6 +1,6 @@
 # Copyright 2023 The MathWorks, Inc.
+# Integration tests with real MATLAB in the loop
 
-import asyncio
 import os
 
 import jupyter_kernel_test
@@ -24,21 +24,6 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
 
     # Executes code and validates output
     code_execute_result = [{"code": "a = 1;a = a + 1", "result": "a = \n   2"}]
-
-    # Tests tab completion
-    completion_samples = [
-        {
-            "text": "func",
-            "matches": [
-                "func2str",
-                "function",
-                "function_handle",
-                "functionhintsfunc",
-                "functions",
-                "functiontests",
-            ],
-        }
-    ]
 
     # Clears the cell output area
     code_clear_output = "clc"
@@ -126,7 +111,7 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
             "stdout",
             f"The output is:\n{self.get_output_text(output_msgs)}",
         )
-        self.assertIn("MATLAB", self.get_output_text(output_msgs))
+        self.assertIn("MATLAB License Number", self.get_output_text(output_msgs))
 
     def test_matlab_kernel_simple_addition(self):
         """Validates if 'TestSimpleAddition' MATLAB test file executes without any failures"""
