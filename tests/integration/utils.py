@@ -1,4 +1,3 @@
-
 import asyncio
 import os
 import socket
@@ -33,6 +32,8 @@ async def start_matlab_proxy_app(out=asyncio.subprocess.PIPE, input_env={}):
         stderr=out,
     )
     return proc
+
+
 def wait_matlab_proxy_up(mwi_app_port, mwi_base_url):
     """Wait for matlab-proxy to be up and running"""
 
@@ -63,6 +64,7 @@ def wait_matlab_proxy_up(mwi_app_port, mwi_base_url):
     assert (
         matlab_status == "up"
     ), f"matlab-proxy process did not start successfully\nError:\n{matlab_proxy_has_error}"
+
 
 def get_random_free_port():
     """Get a random free port"""

@@ -23,12 +23,7 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
     code_hello_world = "disp('hello, world')"
 
     # Executes code and validates output
-    code_execute_result = [
-        {
-            "code": "a = 1;a = a + 1",
-            "result": "a = \n   2"
-        }
-    ]
+    code_execute_result = [{"code": "a = 1;a = a + 1", "result": "a = \n   2"}]
 
     # Tests tab completion
     completion_samples = [
@@ -41,7 +36,7 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
                 "functionhintsfunc",
                 "functions",
                 "functiontests",
-            ]
+            ],
         }
     ]
 
@@ -50,8 +45,18 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
 
     @classmethod
     def setUpClass(cls):
+        import matlab_proxy.util
+        import matlab_proxy.settings
+
         # Get event loop to start matlab-proxy in background
-        cls.loop = asyncio.get_event_loop()
+        cls.loop = matlab_proxy.util.get_event_loop()
+
+        # Validate MATLAB before testing
+        matlab_path = matlab_proxy.settings.get_matlab_path()
+        assert matlab_path is not None, "MATLAB is not in system path"
+        assert (
+            matlab_proxy.settings.get_matlab_version(matlab_path) > "R2020b"
+        ), "MATLAB version should be above R2022b"
 
         # # Store the matlab proxy logs in os.pipe for testing
         # os.pipe2 is not supported in Mac and Windows systems
@@ -95,6 +100,22 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
     def setUp(self):
         self.flush_channels()
 
+    def test_completion(self):
+        """MATLAB Kernel implementation of tab completion test method"""
+        input_text = "func"
+        msg_id = self.kc.complete(input_text)
+        reply = self.get_non_kernel_info_reply()
+        jupyter_kernel_test.validate_message(reply, "complete_reply", msg_id)
+        matches = set(reply["content"]["matches"])
+        self.assertGreater(
+            len(matches), 0, f"The text '{input_text}' does not have any tab completion"
+        )
+        for element in matches:
+            with self.subTest(element=element):
+                assert element.startswith(
+                    input_text
+                ), f"The element '{element}' in tab completion list does not start with '{input_text}'"
+
     def test_matlab_kernel_ver(self):
         """Validates if 'ver' command executes successfully in MATLAB Kernel"""
 
@@ -116,13 +137,17 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
     def test_matlab_kernel_peaks(self):
         """Validates if 'peaks' command plots a figure in jupyter cell output"""
 
-        reply, output_msgs = self.run_code(code='peaks')
+        reply, output_msgs = self.run_code(code="peaks")
         self.assertEqual(
             self.get_output_header_msg_type(output_msgs),
             "execute_result",
             f"The expected output header is 'execute_result'",
         )
-        self.assertIn('image/png', output_msgs[-1]["content"]["data"], "No figure was generated in output")
+        self.assertIn(
+            "image/png",
+            output_msgs[-1]["content"]["data"],
+            "No figure was generated in output",
+        )
 
     # ---- Utility Functions ----
     def run_code(self, code, timeout=30):
