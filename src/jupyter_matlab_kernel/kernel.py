@@ -30,7 +30,7 @@ class MATLABConnectionError(Exception):
 
 
 def is_jupyter_testing_enabled():
-    """Returns 'true' if MWI_JUPYTER_TEST environment variable is set to 'true'"""
+    """Returns True if MWI_JUPYTER_TEST environment variable is set to 'true'"""
 
     return os.environ.get("MWI_JUPYTER_TEST", "false") == "true"
 
