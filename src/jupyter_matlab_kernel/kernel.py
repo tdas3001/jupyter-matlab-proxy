@@ -43,14 +43,13 @@ def start_matlab_proxy_for_testing():
     import matlab_proxy.util.mwi.environment_variables as mwi_env
 
     matlab_proxy_base_url = os.environ[mwi_env.get_env_name_base_url()]
+    matlab_proxy_app_port = os.environ[mwi_env.get_env_name_app_port()]
     url = "{protocol}://localhost:{port}{base_url}".format(
         protocol="http",
-        port=os.environ[mwi_env.get_env_name_app_port()],
+        port=matlab_proxy_app_port,
         base_url=matlab_proxy_base_url,
     )
-    headers = {
-        "Authorization": f"token ",
-    }
+    headers = None
     return url, matlab_proxy_base_url, headers
 
 

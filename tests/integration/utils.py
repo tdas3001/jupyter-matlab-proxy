@@ -66,8 +66,12 @@ def wait_matlab_proxy_up(mwi_app_port, mwi_base_url):
     ), f"matlab-proxy process did not start successfully\nError:\n{matlab_proxy_has_error}"
 
 
-def get_random_free_port():
-    """Get a random free port"""
+def get_random_free_port() -> str:
+    """
+    Get a random free port
+     Returns:
+        port(string): A random free port
+    """
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("", 0))

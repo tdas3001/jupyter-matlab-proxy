@@ -95,7 +95,15 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
         self.flush_channels()
 
     def test_completion(self):
-        """MATLAB Kernel implementation of tab completion test method"""
+        """
+        MATLAB Kernel implementation of tab completion test method.
+        Overrides the dafault implementation in jupyter_kernel_test.KernelTests.
+
+        Tests if the contents of the tab completion list for a given
+        'input text' are not null and starts with the 'input text'.
+        For example, the input text 'xyz' should have tab completion list
+        as ['xyzabc', 'xyzpqr']
+        """
         input_text = "func"
         msg_id = self.kc.complete(input_text)
         reply = self.get_non_kernel_info_reply()
