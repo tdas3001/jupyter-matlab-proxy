@@ -5,7 +5,7 @@
 These tests validate if the Jupyter Notebook Integration works well in presence of a real MATLAB. It covers running code in a jupyter notebook cell in an automated way without involving the UI.
 
 ### Test Requirements
-1. MATLAB (Version > `R2020b`) in the system path
+1. MATLAB (Version >= `R2020b`) in the system path
 2. `pytest` and `jupyter-kernel-test` python packages
 3. MATLAB Proxy requirements
 4. Jupyter MATLAB Proxy requirements
@@ -20,3 +20,9 @@ The package `jupyter-kernel-test`, unfortunately, only considers the MATLAB Kern
 
 ### Test Suite Teardown
 After the test execution ends, the matlab-proxy process is terminated and all the environment variables set for testing purposes are unset to restore the system to the original state.
+
+----
+
+Copyright (c) 2023 The MathWorks, Inc. All rights reserved.
+
+----

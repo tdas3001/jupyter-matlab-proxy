@@ -30,15 +30,30 @@ class MATLABConnectionError(Exception):
 
 
 def is_jupyter_testing_enabled():
-    """Returns True if MWI_JUPYTER_TEST environment variable is set to 'true'"""
+    """
+    Checks if testing mode is enabled in jupyter-matlab-kernel
 
-    return os.environ.get("MWI_JUPYTER_TEST", "false") == "true"
+    Returns:
+        bool: True if MWI_JUPYTER_TEST environment variable is set to 'true'
+        else False
+    """
+
+    return os.environ.get("MWI_JUPYTER_TEST", "false").lower() == "true"
 
 
 def start_matlab_proxy_for_testing():
-    """Only used for testing purposes. Gets the matlab-proxy server configuration
-    from environment variables (set by tests) and mocks the 'start_matlab_proxy' function
     """
+    Only used for testing purposes. Gets the matlab-proxy server configuration
+    from environment variables (set by tests) and mocks the 'start_matlab_proxy' function
+
+    Returns:
+        Tuple (string, string, dict):
+            url (string): Complete URL to send HTTP requests to matlab-proxy
+            base_url (string): Complete base url for matlab-proxy obtained from tests
+            headers (dict): Empty dictionary
+    """
+    # Only used for testing purposes. Gets the matlab-proxy server configuration
+    # from environment variables (set by tests) and mocks the 'start_matlab_proxy' function
 
     import matlab_proxy.util.mwi.environment_variables as mwi_env
 
@@ -49,7 +64,7 @@ def start_matlab_proxy_for_testing():
         port=matlab_proxy_app_port,
         base_url=matlab_proxy_base_url,
     )
-    headers = None
+    headers = {}
     return url, matlab_proxy_base_url, headers
 
 

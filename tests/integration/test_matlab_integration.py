@@ -8,7 +8,8 @@ import tests.integration.utils
 
 
 class MATLABKernelTests(jupyter_kernel_test.KernelTests):
-    """Class for MATLAB Kernel testing with jupyter-kernel-test package
+    """
+    Class for MATLAB Kernel testing with jupyter-kernel-test package
 
     The class inherits from jupyter_kernel_test.KernelTests class.
     Here we initialize a few class variables that have been defined in the
@@ -94,10 +95,15 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
     def setUp(self):
         self.flush_channels()
 
+    def tearDown(self):
+        """Clears MATLAB Command Window and MATLAB Workspace"""
+
+        self._run_code(code="clc;clear")
+
     def test_completion(self):
         """
         MATLAB Kernel implementation of tab completion test method.
-        Overrides the dafault implementation in jupyter_kernel_test.KernelTests.
+        Overrides the default implementation in jupyter_kernel_test.KernelTests.
 
         Tests if the contents of the tab completion list for a given
         'input text' are not null and starts with the 'input text'.
@@ -192,8 +198,10 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
             return output
 
     def _validate_matlab_test(self, test_filepath):
-        """Runs MATLAB test given the test file path. Validates if all the test
-        points passed."""
+        """
+        Runs MATLAB test given the test file path. Validates if all the test
+        points passed.
+        """
 
         reply, output_msgs = self._run_code(
             code=f"assertSuccess(runtests('{test_filepath}'))"
