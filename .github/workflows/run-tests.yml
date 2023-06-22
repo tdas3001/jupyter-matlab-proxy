@@ -4,9 +4,10 @@
 name: Testing MATLAB Jupyter Integration
 
 on:
-  push:
-    branches:
-      - "main"
+  workflow_dispatch:
+#   push:
+#     branches:
+#       - "main"
 
 jobs:
   python_tests:
