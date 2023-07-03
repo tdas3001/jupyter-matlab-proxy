@@ -13,12 +13,15 @@ Once installed, you can:
 
 This package supports both Jupyter Notebook and JupyterLab. Some capabilities are limited to the JupyterLab interface.
 
+**Note on JupyterLab 4:**
+Features such as auto-indentation and syntax highlighting are available in JupyterLab 3, but not yet supported in JupyterLab 4.
+
 This package is under active development. To report any issues or suggestions, see the [Feedback](#feedback) section.
 
 ----
 ## Requirements
 
-* Python versions: **3.7** | **3.8** | **3.9**  | **3.10**
+* Python versions: **3.8** | **3.9**  | **3.10** | **3.11**
 
 * MATLAB R2020b or later is installed and on the system PATH.
   ```bash
@@ -47,8 +50,7 @@ This package is under active development. To report any issues or suggestions, s
 * Supported Operating Systems:
     * Linux®
     * MacOS
-
-    **NOTE**: Support for Windows is unavailable due to [jupyter-server-proxy/issue#47](https://github.com/jupyterhub/jupyter-server-proxy/issues/147)
+    * Windows® Operating System (starting v0.6.0 of jupyter-matlab-proxy)
 
 ## Installation
 
@@ -61,6 +63,11 @@ python3 -m pip install jupyter-matlab-proxy
 ```
 Installing this package will not automatically install MATLAB. You must have [MATLAB](https://www.mathworks.com/help/install/install-products.html) installed to execute MATLAB code through Jupyter.
 
+MATLAB code execution is available on both JupyterLab 3 and JupyterLab 4, but other features (such as syntax highlighting) are currently only supported on JupyterLab 3.
+Install JupyterLab 3 using:
+```bash
+python3 -m pip install 'jupyterlab>=3.0.0,<4.0.0a0'
+```
 
 ### Building From Sources
 Building from sources requires Node.js® version 16 or higher.
