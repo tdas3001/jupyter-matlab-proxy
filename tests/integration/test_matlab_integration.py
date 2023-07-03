@@ -4,7 +4,7 @@
 import os
 
 import jupyter_kernel_test
-import tests.integration.utils
+import integration_test_utils
 
 
 class MATLABKernelTests(jupyter_kernel_test.KernelTests):
@@ -58,24 +58,25 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
         cls.dpipe = os.pipe2(os.O_NONBLOCK) if system.is_linux() else os.pipe()
 
         # Select a random free port to serve matlab proxy for testing
-        cls.mwi_app_port = tests.integration.utils.get_random_free_port()
+        cls.mwi_app_port = integration_test_utils.get_random_free_port()
         cls.mwi_base_url = "/matlab-test"
 
         # Set environment variables needed to launch matlab proxy
         cls.input_env = {
             "MWI_JUPYTER_TEST": "true",
+            "MWI_USE_EXISTING_LICENSE": "True",
             "MWI_APP_PORT": cls.mwi_app_port,
             "MWI_BASE_URL": cls.mwi_base_url,
         }
 
         # Start matlab-proxy-app
         cls.proc = cls.loop.run_until_complete(
-            tests.integration.utils.start_matlab_proxy_app(
+            integration_test_utils.start_matlab_proxy_app(
                 out=cls.dpipe[1], input_env=cls.input_env
             )
         )
         # Wait for matlab-proxy to be up and running
-        tests.integration.utils.wait_matlab_proxy_up(cls.mwi_app_port, cls.mwi_base_url)
+        integration_test_utils.wait_matlab_proxy_up(cls.mwi_app_port, cls.mwi_base_url)
 
         # Update the OS environment variables such as app port, base url etc.
         # so that they can be used by MATLAB Kernel to obtain MATLAB
