@@ -155,18 +155,22 @@ def unlicense_matlab_proxy(mwi_app_port, mwi_base_url):
         mwi_app_port (string): port where matlab-proxy runs
         mwi_base_url (string): base url for matlab-proxy
     """
-    max_retries = 3 # Max retries for unlicensing matlab-proxy
+    max_retries = 3  # Max retries for unlicensing matlab-proxy
     retries = 0
 
     url = f"http://localhost:{mwi_app_port}{mwi_base_url}"
-    while (retries < max_retries):
+    while retries < max_retries:
         error = None
         try:
-            resp = requests.delete(url + "/set_licensing_info", headers={}, verify=False)
+            resp = requests.delete(
+                url + "/set_licensing_info", headers={}, verify=False
+            )
             if resp.status_code == requests.codes.OK:
                 data = resp.json()
                 assert data["licensing"] == None, "Licensing is not unset"
-                assert data["matlab"]["status"] == "down", "MATLAB is not in 'stopped' state"
+                assert (
+                    data["matlab"]["status"] == "down"
+                ), "MATLAB is not in 'stopped' state"
                 assert data["error"] == None, f"Error: {data['error']}"
                 break
             else:
@@ -174,7 +178,7 @@ def unlicense_matlab_proxy(mwi_app_port, mwi_base_url):
         except Exception as e:
             error = e
         finally:
-            retries+=1
+            retries += 1
 
     # If the above code threw error even after maximum retries, then raise error
     if error:
