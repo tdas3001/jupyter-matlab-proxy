@@ -73,6 +73,8 @@ def start_matlab_proxy(test=False):
     Start matlab-proxy registered with the jupyter server which started the
     current kernel process.
 
+    Args:
+        test (bool): If testing mode is enabled
     Raises:
         MATLABConnectionError: Occurs when kernel is not started by jupyter server.
         HTTPError: Occurs when kernel cannot connect with matlab-proxy.

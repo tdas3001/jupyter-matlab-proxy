@@ -39,6 +39,7 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
     @classmethod
     def setUpClass(cls):
         import matlab_proxy.util
+        from matlab_proxy.util import system
         import matlab_proxy.settings
 
         # Get event loop to start matlab-proxy in background
@@ -51,25 +52,41 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
             matlab_proxy.settings.get_matlab_version(matlab_path) >= "R2020b"
         ), "MATLAB version should be R2020b or later"
 
-        # # Store the matlab proxy logs in os.pipe for testing
+        # Store the matlab proxy logs in os.pipe for testing
         # os.pipe2 is not supported in Mac and Windows systems
-        from matlab_proxy.util import system
-
         cls.dpipe = os.pipe2(os.O_NONBLOCK) if system.is_linux() else os.pipe()
-
-        # Select a random free port to serve matlab proxy for testing
-        cls.mwi_app_port = integration_test_utils.get_random_free_port()
         cls.mwi_base_url = "/matlab-test"
 
-        # Set environment variables needed to launch matlab proxy
+        # Start matlab-proxy-app using playwright and license it
+        lic_proc = cls.loop.run_until_complete(
+            integration_test_utils.start_licensing_matlab_proxy(
+                out=cls.dpipe[1],
+                input_env={
+                    # Set environment variables needed to launch matlab proxy
+                    # Select a random free port to serve matlab proxy for testing
+                    "MWI_APP_PORT": integration_test_utils.get_random_free_port(),
+                    "MWI_BASE_URL": cls.mwi_base_url,
+                },
+            )
+        )
+        # Wait for the playwright process to finish execution
+        # and license matlab-proxy
+        cls.loop.run_until_complete(lic_proc.wait())
+
+        # Get another port to start MATLAB Proxy for testing
+        # since the previous port used for licensing matlab-proxy might be in use
+        cls.mwi_app_port = integration_test_utils.get_random_free_port()
+
+        # Set environment variables needed to launch matlab-proxy
         cls.input_env = {
+            # MWI_JUPYTER_TEST env variable is used in jupyter_matlab_kerenl/kernel.py
+            # to bypass jupyter server for testing
             "MWI_JUPYTER_TEST": "true",
-            "MWI_USE_EXISTING_LICENSE": "True",
             "MWI_APP_PORT": cls.mwi_app_port,
             "MWI_BASE_URL": cls.mwi_base_url,
         }
 
-        # Start matlab-proxy-app
+        # Start matlab-proxy-app for testing
         cls.proc = cls.loop.run_until_complete(
             integration_test_utils.start_matlab_proxy_app(
                 out=cls.dpipe[1], input_env=cls.input_env
@@ -86,6 +103,13 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
+
+        # Unlicense MATLAB Proxy after testing
+        integration_test_utils.unlicense_matlab_proxy(
+            cls.mwi_app_port, cls.mwi_base_url
+        )
+
+        # Terminate MATLAB Proxy
         cls.proc.terminate()
         cls.loop.run_until_complete(cls.proc.wait())
 

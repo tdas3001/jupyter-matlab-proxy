@@ -1,0 +1,67 @@
+# Copyright 2020-2023 The MathWorks, Inc
+
+# Workflow that contains jobs to test MATLAB Jupyter Integration
+name: Integration testing MATLAB Jupyter Integration
+
+on:
+  # Reusable workflow
+  # Trigger on workflow call
+  workflow_call:
+    secrets:
+      TEST_USERNAME:
+        description: 'MW Username for testing'
+        required: true
+      TEST_PASSWORD:
+        description: 'Password for the MW Username'
+        required: true
+
+jobs:
+  python_integration_tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        matlab-release: ["R2020b", "R2023a"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up MATLAB ${{ matrix.matlab-release }}
+        # Use MATLAB Actions to get running MATLAB in GitHub Actions
+        uses: matlab-actions/setup-matlab@v2-beta
+        with:
+          release: ${{ matrix.matlab-release }}
+          products: MATLAB Symbolic_Math_Toolbox
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install Python dependencies
+        # Installing wheel package will slightly speed-up installing dependencies.
+        # Installing the package with "[dev]" flag  will install test dependecies as well,
+        # enabling us to run pytest.
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install wheel pytest
+          python3 -m pip install .[dev]
+
+      - name: Install Playwright dependencies
+        working-directory: ./tests/integration/configuration
+        run: |
+          npm ci
+          npx playwright install
+
+      - name: Integration test with pytest
+        run: python3 -m pytest tests/integration
+        env:
+          TEST_USERNAME: ${{secrets.TEST_USERNAME}}
+          TEST_PASSWORD: ${{secrets.TEST_PASSWORD}}
