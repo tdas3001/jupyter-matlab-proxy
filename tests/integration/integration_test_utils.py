@@ -4,6 +4,7 @@
 import asyncio
 import os
 import socket
+import subprocess
 import time
 
 import requests
@@ -18,6 +19,7 @@ def matlab_proxy_cmd_for_testing():
     """
 
     import matlab_proxy
+
     from jupyter_matlab_proxy.jupyter_config import config
 
     matlab_cmd = [
@@ -28,14 +30,12 @@ def matlab_proxy_cmd_for_testing():
     return matlab_cmd
 
 
-async def start_matlab_proxy_app(out=asyncio.subprocess.PIPE, input_env={}):
+async def start_matlab_proxy_app(input_env={}):
     """
     Starts MATLAB proxy as a subprocess. The subprocess runs forever unless
     there is any error
 
     Args:
-        out (_type_, optional): Output mode of subprocess logs.
-        Defaults to asyncio.subprocess.PIPE.
         input_env (dict, optional): Environment variables to be
         initialized for the subprocess. Defaults to {}.
 
@@ -49,43 +49,46 @@ async def start_matlab_proxy_app(out=asyncio.subprocess.PIPE, input_env={}):
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         env=matlab_proxy_env,
-        stdout=out,
+        stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
     return proc
 
 
-async def start_licensing_matlab_proxy(out=asyncio.subprocess.PIPE, input_env={}):
+def license_matlab_proxy(input_env={}):
     """
     Starts MATLAB proxy as a subprocess and uses playwright to license
     matlab-proxy using online licensing. The subprocess does not run forever
     here because playwright terminates matlab-proxy as soon as the licensing is done
 
     Args:
-        out (_type_, optional): Output mode of subprocess logs.
-        Defaults to asyncio.subprocess.PIPE.
         input_env (dict, optional): Environment variables to be
         initialized for the subprocess. Defaults to {}.
 
     Returns:
         Process: subprocess object
     """
+    from shutil import which
 
+    # WIndows machines are not able to find npx installable path
+    # when called from a python script. So, the entire executable
+    # path needs to be provided.
+    npx_path = which("npx")
     cmd = [
-        "npx",
+        npx_path,
         "playwright",
         "test",
     ]
     matlab_proxy_env = os.environ.copy()
     matlab_proxy_env.update(input_env)
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
+    subprocess.run(
+        cmd,
         env=matlab_proxy_env,
-        stdout=out,
-        stderr=asyncio.subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         cwd=os.path.join(os.path.dirname(__file__), "configuration"),
+        check=True,
     )
-    return proc
 
 
 def wait_matlab_proxy_up(mwi_app_port, mwi_base_url):
@@ -98,6 +101,7 @@ def wait_matlab_proxy_up(mwi_app_port, mwi_base_url):
     """
 
     from matlab_proxy.util import system
+
     from jupyter_matlab_kernel import mwi_comm_helpers
 
     # Timeout for polling the matlab-proxy http endpoints.

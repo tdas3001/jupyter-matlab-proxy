@@ -3,8 +3,8 @@
 
 import os
 
-import jupyter_kernel_test
 import integration_test_utils
+import jupyter_kernel_test
 
 
 class MATLABKernelTests(jupyter_kernel_test.KernelTests):
@@ -38,40 +38,33 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
 
     @classmethod
     def setUpClass(cls):
+        import matlab_proxy.settings
         import matlab_proxy.util
         from matlab_proxy.util import system
-        import matlab_proxy.settings
 
         # Get event loop to start matlab-proxy in background
         cls.loop = matlab_proxy.util.get_event_loop()
 
         # Validate MATLAB before testing
-        matlab_path = matlab_proxy.settings.get_matlab_path()
+        matlab_path = matlab_proxy.settings.get_matlab_root_path()
+
+        # Check if MATLAB is in the system path
         assert matlab_path is not None, "MATLAB is not in system path"
+
+        # Check if MATLAB verison is >= R2020b
         assert (
             matlab_proxy.settings.get_matlab_version(matlab_path) >= "R2020b"
         ), "MATLAB version should be R2020b or later"
 
-        # Store the matlab proxy logs in os.pipe for testing
-        # os.pipe2 is not supported in Mac and Windows systems
-        cls.dpipe = os.pipe2(os.O_NONBLOCK) if system.is_linux() else os.pipe()
         cls.mwi_base_url = "/matlab-test"
-
-        # Start matlab-proxy-app using playwright and license it
-        lic_proc = cls.loop.run_until_complete(
-            integration_test_utils.start_licensing_matlab_proxy(
-                out=cls.dpipe[1],
-                input_env={
-                    # Set environment variables needed to launch matlab proxy
-                    # Select a random free port to serve matlab proxy for testing
-                    "MWI_APP_PORT": integration_test_utils.get_random_free_port(),
-                    "MWI_BASE_URL": cls.mwi_base_url,
-                },
-            )
+        integration_test_utils.license_matlab_proxy(
+            input_env={
+                # Set environment variables needed to launch matlab proxy
+                # Select a random free port to serve matlab proxy for testing
+                "MWI_APP_PORT": integration_test_utils.get_random_free_port(),
+                "MWI_BASE_URL": cls.mwi_base_url,
+            },
         )
-        # Wait for the playwright process to finish execution
-        # and license matlab-proxy
-        cls.loop.run_until_complete(lic_proc.wait())
 
         # Get another port to start MATLAB Proxy for testing
         # since the previous port used for licensing matlab-proxy might be in use
@@ -88,9 +81,7 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
 
         # Start matlab-proxy-app for testing
         cls.proc = cls.loop.run_until_complete(
-            integration_test_utils.start_matlab_proxy_app(
-                out=cls.dpipe[1], input_env=cls.input_env
-            )
+            integration_test_utils.start_matlab_proxy_app(input_env=cls.input_env)
         )
         # Wait for matlab-proxy to be up and running
         integration_test_utils.wait_matlab_proxy_up(cls.mwi_app_port, cls.mwi_base_url)
@@ -115,7 +106,7 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
 
         # Unset the environment variables based on the configuration
         for key in cls.input_env.keys():
-            os.unsetenv(key)
+            del os.environ[key]
 
     def setUp(self):
         self.flush_channels()
@@ -145,8 +136,11 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
         )
         for element in matches:
             with self.subTest(element=element):
-                assert element.startswith(
-                    input_text
+                # Tab completion keys and matches are case-insensitive
+                # hence the input text and the resultant list of matches
+                # are first converted into lower cases before comparison
+                assert element.lower().startswith(
+                    input_text.lower()
                 ), f"The element '{element}' in tab completion list does not start with '{input_text}'"
 
     def test_matlab_kernel_ver(self):

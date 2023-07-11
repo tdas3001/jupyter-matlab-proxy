@@ -33,12 +33,12 @@ const config = {
 
     /** Maximum time one test can run for. */
     /** This is kept to 60s because time taken by a test sometimes depends on server and network speed */
-    timeout: 60 * 1000,
+    timeout: 300 * 1000,
 
     /** Customise the settings for each assertion 'expect' statement. */
     expect: {
         /** Maximum time expect() should wait for the condition to be met. */
-        timeout: 60 * 1000
+        timeout: 120 * 1000
     },
 
     /**
