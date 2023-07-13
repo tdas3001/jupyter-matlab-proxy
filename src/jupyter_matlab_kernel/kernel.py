@@ -31,7 +31,7 @@ class MATLABConnectionError(Exception):
 
 def is_jupyter_testing_enabled():
     """
-    Checks if testing mode is enabled in jupyter-matlab-kernel
+    Checks if testing mode is enabled
 
     Returns:
         bool: True if MWI_JUPYTER_TEST environment variable is set to 'true'
@@ -44,7 +44,7 @@ def is_jupyter_testing_enabled():
 def start_matlab_proxy_for_testing():
     """
     Only used for testing purposes. Gets the matlab-proxy server configuration
-    from environment variables (set by tests) and mocks the 'start_matlab_proxy' function
+    from environment variables and mocks the 'start_matlab_proxy' function
 
     Returns:
         Tuple (string, string, dict):

@@ -32,7 +32,7 @@ const config = {
     testDir: '.',
 
     /** Maximum time one test can run for. */
-    /** This is kept to 60s because time taken by a test sometimes depends on server and network speed */
+    /** This is kept to 300s because time taken by a test sometimes depends on server and network speed */
     timeout: 300 * 1000,
 
     /** Customise the settings for each assertion 'expect' statement. */
@@ -95,7 +95,7 @@ const config = {
       trace: 'on-first-retry',
 
       screenshot: 'only-on-failure',
-      video: 'on',
+      video: 'retain-on-failure',
 
       /** The default viewport size, can be overridden by the tests. */
       viewport: { width: 1024, height: 768 }

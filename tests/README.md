@@ -14,17 +14,16 @@ These tests validate if the Jupyter Notebook Integration works well in presence 
 1. MATLAB (Version >= `R2020b`) in the system path
 2. `pytest` and `jupyter-kernel-test` python packages
 3. `Node.js` version >= 16.x
-4. Run the following commands in terminal:
+4. Run the following commands from `<project_root_directory>/tests/integration/configuration` location in the terminal:
     ```
-    npm install -D @playwright/test
-    npm install -D dotenv
+    npm ci
     npx playwright install
     ```
 5. MATLAB Proxy requirements
 6. Jupyter MATLAB Proxy requirements
 
 ### How to run
-* Run the following command
+* Run the following command from `<project_root_directory>` location in the terminal:
     ```
     pytest tests/integration
     ```
@@ -34,7 +33,7 @@ We use the [jupyter-kernel-test](https://github.com/jupyter/jupyter_kernel_test)
 
 The package `jupyter-kernel-test`, unfortunately, only considers the MATLAB Kernel as the system under test and does not communicate with [Jupyter Server](https://github.com/jupyter-server/jupyter_server) to query for running matlab-proxy processes. So, we must bypass Jupyter Server in our tests and establish a direct link between `jupyter-matlab-proxy` and `matlab-proxy`. We do this by starting an asynchronous matlab-proxy server in the test setup. The matlab-proxy configurations, such as app port, base URL etc., are passed as environment variables to the MATLAB Kernel, so it can use this server to serve MATLAB.
 
-The licensing of MATLAB Proxy is done using the playwright UI testing framework, where the MathWorks user credentials exist in GitHub Secrets.
+The licensing of MATLAB Proxy is done using the Playwright UI testing framework, where the MathWorks user credentials exist in environment variables.
 
 ### Test Suite Execution
 1. These tests check the basic functionality that a jupyter kernel should support, i.e. running code, tab completion, printing a message, etc.
