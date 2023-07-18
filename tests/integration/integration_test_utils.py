@@ -4,10 +4,28 @@
 import asyncio
 import os
 import socket
-import subprocess
 import time
 
 import requests
+
+
+def perform_basic_checks():
+    """
+    Perform basic checks for the prerequisites for starting
+    matlab-proxy
+    """
+    import matlab_proxy.settings
+
+    # Validate MATLAB before testing
+    matlab_path = matlab_proxy.settings.get_matlab_root_path()
+
+    # Check if MATLAB is in the system path
+    assert matlab_path is not None, "MATLAB is not in system path"
+
+    # Check if MATLAB verison is >= R2020b
+    assert (
+        matlab_proxy.settings.get_matlab_version(matlab_path) >= "R2020b"
+    ), "MATLAB version should be R2020b or later"
 
 
 def matlab_proxy_cmd_for_testing():
@@ -32,7 +50,7 @@ def matlab_proxy_cmd_for_testing():
 
 async def start_matlab_proxy_app(input_env={}):
     """
-    Starts MATLAB proxy as a subprocess. The subprocess runs forever unless
+    Starts matlab-proxy as a subprocess. The subprocess runs forever unless
     there is any error
 
     Args:
@@ -55,49 +73,12 @@ async def start_matlab_proxy_app(input_env={}):
     return proc
 
 
-def license_matlab_proxy(input_env={}):
-    """
-    Starts MATLAB proxy as a subprocess and uses playwright to license
-    matlab-proxy using online licensing. The subprocess does not run forever
-    here because playwright terminates matlab-proxy as soon as the licensing is done
-
-    Args:
-        input_env (dict, optional): Environment variables to be
-        initialized for the subprocess. Defaults to {}.
-
-    Returns:
-        Process: subprocess object
-    """
-    from shutil import which
-
-    # WIndows machines are not able to find npx installable path
-    # when called from a python script. So, the entire executable
-    # path needs to be provided.
-    npx_path = which("npx")
-    cmd = [
-        npx_path,
-        "playwright",
-        "test",
-    ]
-    matlab_proxy_env = os.environ.copy()
-    matlab_proxy_env.update(input_env)
-    subprocess.run(
-        cmd,
-        env=matlab_proxy_env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=os.path.join(os.path.dirname(__file__), "configuration"),
-        check=True,
-    )
-
-
-def wait_matlab_proxy_up(mwi_app_port, mwi_base_url):
+def wait_matlab_proxy_up(matlab_proxy_url):
     """
     Wait for matlab-proxy to be up and running
 
     Args:
-        mwi_app_port (string): App port where matlab-proxy would be running
-        mwi_base_url (string): Context root that matlab-proxy would use
+        matlab_proxy_url (string): URL to access matlab-proxy
     """
 
     from matlab_proxy.util import system
@@ -105,14 +86,13 @@ def wait_matlab_proxy_up(mwi_app_port, mwi_base_url):
     from jupyter_matlab_kernel import mwi_comm_helpers
 
     # Timeout for polling the matlab-proxy http endpoints.
-    # matlab proxy takes more time to be 'up' in machines
+    # matlab-proxy takes more time to be 'up' in machines
     # other than Linux
     MAX_TIMEOUT = 120 if system.is_linux() else 300
 
     is_matlab_licensed = False
     matlab_status = "down"
     matlab_proxy_has_error = None
-    url = f"http://localhost:{mwi_app_port}{mwi_base_url}"
     start_time = time.time()
 
     # Poll for matlab-proxy to be up
@@ -125,7 +105,9 @@ def wait_matlab_proxy_up(mwi_app_port, mwi_base_url):
                 is_matlab_licensed,
                 matlab_status,
                 matlab_proxy_has_error,
-            ) = mwi_comm_helpers.fetch_matlab_proxy_status(url=url, headers={})
+            ) = mwi_comm_helpers.fetch_matlab_proxy_status(
+                url=matlab_proxy_url, headers={}
+            )
         except:
             # The network connection can be flaky while the
             # matlab-proxy server is booting. There can also be some
@@ -152,22 +134,68 @@ def get_random_free_port() -> str:
     return port
 
 
-def unlicense_matlab_proxy(mwi_app_port, mwi_base_url):
-    """Unlicense matlab-proxy that is licensed using online licensing
+def license_matlab_proxy(matlab_proxy_url):
+    """
+    Use Playwright UI automation to license matlab-proxy.
+    Uses TEST_USERNAME and TEST_PASSWORD from environment variables.
 
     Args:
-        mwi_app_port (string): port where matlab-proxy runs
-        mwi_base_url (string): base url for matlab-proxy
+        matlab_proxy_url (string): URL to access matlab-proxy
+    """
+    from playwright.sync_api import sync_playwright, expect
+
+    # These are MathWorks Account credentials to license MATLAB
+    # Throws 'KeyError' if the following environment variables are not set
+    TEST_USERNAME = os.environ["TEST_USERNAME"]
+    TEST_PASSWORD = os.environ["TEST_PASSWORD"]
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(matlab_proxy_url)
+
+        # Fills in the username textbox
+        email_text_box = page.frame_locator("#loginframe").locator("#userId")
+        expect(
+            email_text_box,
+            "Wait for email ID textbox to appear. This might fail if the MHLM licensing window does not appear",
+        ).to_be_visible(timeout=60000)
+        email_text_box.fill(TEST_USERNAME)
+        email_text_box.press("Enter")
+
+        # Fills in the password textbox
+        password_text_box = page.frame_locator("#loginframe").locator("#password")
+        expect(password_text_box, "Wait for password textbox to appear").to_be_visible(
+            timeout=30000
+        )
+        password_text_box.fill(TEST_PASSWORD)
+        password_text_box.press("Enter")
+        password_text_box.press("Enter")
+
+        # Verifies if licensing is successful by checking the status information
+        status_info = page.get_by_text("Status Information")
+        expect(
+            status_info,
+            "Verify if Licensing is successful. This might fail if incorrect credentials are provided",
+        ).to_be_visible(timeout=60000)
+        browser.close()
+
+
+def unlicense_matlab_proxy(matlab_proxy_url):
+    """
+    Unlicense matlab-proxy that is licensed using online licensing
+
+    Args:
+        matlab_proxy_url (string): URL to access matlab-proxy
     """
     max_retries = 3  # Max retries for unlicensing matlab-proxy
     retries = 0
 
-    url = f"http://localhost:{mwi_app_port}{mwi_base_url}"
     while retries < max_retries:
         error = None
         try:
             resp = requests.delete(
-                url + "/set_licensing_info", headers={}, verify=False
+                matlab_proxy_url + "/set_licensing_info", headers={}, verify=False
             )
             if resp.status_code == requests.codes.OK:
                 data = resp.json()

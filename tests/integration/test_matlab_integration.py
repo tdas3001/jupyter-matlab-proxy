@@ -3,7 +3,6 @@
 
 import os
 
-import integration_test_utils
 import jupyter_kernel_test
 
 
@@ -35,78 +34,6 @@ class MATLABKernelTests(jupyter_kernel_test.KernelTests):
 
     # Clears the cell output area
     code_clear_output = "clc"
-
-    @classmethod
-    def setUpClass(cls):
-        import matlab_proxy.settings
-        import matlab_proxy.util
-        from matlab_proxy.util import system
-
-        # Get event loop to start matlab-proxy in background
-        cls.loop = matlab_proxy.util.get_event_loop()
-
-        # Validate MATLAB before testing
-        matlab_path = matlab_proxy.settings.get_matlab_root_path()
-
-        # Check if MATLAB is in the system path
-        assert matlab_path is not None, "MATLAB is not in system path"
-
-        # Check if MATLAB verison is >= R2020b
-        assert (
-            matlab_proxy.settings.get_matlab_version(matlab_path) >= "R2020b"
-        ), "MATLAB version should be R2020b or later"
-
-        cls.mwi_base_url = "/matlab-test"
-        integration_test_utils.license_matlab_proxy(
-            input_env={
-                # Set environment variables needed to launch matlab proxy
-                # Select a random free port to serve matlab proxy for testing
-                "MWI_APP_PORT": integration_test_utils.get_random_free_port(),
-                "MWI_BASE_URL": cls.mwi_base_url,
-            },
-        )
-
-        # Get another port to start MATLAB Proxy for testing
-        # since the previous port used for licensing matlab-proxy might be in use
-        cls.mwi_app_port = integration_test_utils.get_random_free_port()
-
-        # Set environment variables needed to launch matlab-proxy
-        cls.input_env = {
-            # MWI_JUPYTER_TEST env variable is used in jupyter_matlab_kerenl/kernel.py
-            # to bypass jupyter server for testing
-            "MWI_JUPYTER_TEST": "true",
-            "MWI_APP_PORT": cls.mwi_app_port,
-            "MWI_BASE_URL": cls.mwi_base_url,
-        }
-
-        # Start matlab-proxy-app for testing
-        cls.proc = cls.loop.run_until_complete(
-            integration_test_utils.start_matlab_proxy_app(input_env=cls.input_env)
-        )
-        # Wait for matlab-proxy to be up and running
-        integration_test_utils.wait_matlab_proxy_up(cls.mwi_app_port, cls.mwi_base_url)
-
-        # Update the OS environment variables such as app port, base url etc.
-        # so that they can be used by MATLAB Kernel to obtain MATLAB
-        os.environ.update(cls.input_env)
-        super().setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-
-        # Unlicense MATLAB Proxy after testing
-        integration_test_utils.unlicense_matlab_proxy(
-            cls.mwi_app_port, cls.mwi_base_url
-        )
-
-        # Terminate MATLAB Proxy
-        cls.proc.terminate()
-        cls.loop.run_until_complete(cls.proc.wait())
-
-        # Unset the environment variables based on the configuration
-        for key in cls.input_env.keys():
-            del os.environ[key]
 
     def setUp(self):
         self.flush_channels()

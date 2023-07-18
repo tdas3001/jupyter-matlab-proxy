@@ -42,11 +42,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
       - name: Install Python dependencies
         # Installing wheel package will slightly speed-up installing dependencies.
         # Installing the package with "[dev]" flag  will install test dependecies as well,
@@ -56,11 +51,8 @@ jobs:
           python3 -m pip install wheel pytest
           python3 -m pip install .[dev]
 
-      - name: Install Playwright dependencies
-        working-directory: ./tests/integration/configuration
-        run: |
-          npm ci
-          npx playwright install
+      - name: Ensure browsers are installed for playwright
+        run: python3 -m playwright install --with-deps
 
       - name: Integration test with pytest
         run: python3 -m pytest tests/integration
