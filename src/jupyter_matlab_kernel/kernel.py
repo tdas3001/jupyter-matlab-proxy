@@ -68,7 +68,7 @@ def start_matlab_proxy_for_testing():
     return url, matlab_proxy_base_url, headers
 
 
-def start_matlab_proxy(test=False):
+def start_matlab_proxy():
     """
     Start matlab-proxy registered with the jupyter server which started the
     current kernel process.
@@ -89,7 +89,7 @@ def start_matlab_proxy(test=False):
     # If jupyter testing is enabled, then a standalone matlab-proxy server would be
     # launched by the tests and kernel would expect the configurations of this matlab-proxy
     # server which is provided through environment variables to 'start_matlab_proxy_for_testing'
-    if test:
+    if is_jupyter_testing_enabled():
         return start_matlab_proxy_for_testing()
 
     nb_server_list = []
@@ -224,9 +224,7 @@ class MATLABKernel(ipykernel.kernelbase.Kernel):
         super(MATLABKernel, self).__init__(*args, **kwargs)
         try:
             # Start matlab-proxy using the jupyter-matlab-proxy registered endpoint.
-            self.murl, self.server_base_url, self.headers = start_matlab_proxy(
-                test=is_jupyter_testing_enabled()
-            )
+            self.murl, self.server_base_url, self.headers = start_matlab_proxy()
             (
                 self.is_matlab_licensed,
                 self.matlab_status,
