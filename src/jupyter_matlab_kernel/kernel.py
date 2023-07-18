@@ -59,7 +59,10 @@ def start_matlab_proxy_for_testing():
 
     matlab_proxy_base_url = os.environ[mwi_env.get_env_name_base_url()]
     matlab_proxy_app_port = os.environ[mwi_env.get_env_name_app_port()]
-    url = "{protocol}://localhost:{port}{base_url}".format(
+
+    # '127.0.0.1' is used instead 'localhost' for testing since Windows machines consume
+    # some time to resolve 'localhost' hostname
+    url = "{protocol}://127.0.0.1:{port}{base_url}".format(
         protocol="http",
         port=matlab_proxy_app_port,
         base_url=matlab_proxy_base_url,

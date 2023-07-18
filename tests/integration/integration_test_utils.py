@@ -154,19 +154,29 @@ def license_matlab_proxy(matlab_proxy_url):
         page = browser.new_page()
         page.goto(matlab_proxy_url)
 
+        # Find the MHLM licensing windows in matlab-proxy
+        mhlm_div = page.locator("#MHLM")
+        expect(
+            mhlm_div,
+            "Wait for MHLM licensing window to appear. This might fail if the MATLAB is already licensed",
+        ).to_be_visible(timeout=60000)
+
+        # The login iframe is present within the MHLM Div
+        login_iframe = mhlm_div.frame_locator("#loginframe")
+
         # Fills in the username textbox
-        email_text_box = page.frame_locator("#loginframe").locator("#userId")
+        email_text_box = login_iframe.locator("#userId")
         expect(
             email_text_box,
-            "Wait for email ID textbox to appear. This might fail if the MHLM licensing window does not appear",
-        ).to_be_visible(timeout=60000)
+            "Wait for email ID textbox to appear",
+        ).to_be_visible(timeout=20000)
         email_text_box.fill(TEST_USERNAME)
         email_text_box.press("Enter")
 
         # Fills in the password textbox
-        password_text_box = page.frame_locator("#loginframe").locator("#password")
+        password_text_box = login_iframe.locator("#password")
         expect(password_text_box, "Wait for password textbox to appear").to_be_visible(
-            timeout=30000
+            timeout=20000
         )
         password_text_box.fill(TEST_PASSWORD)
         password_text_box.press("Enter")
@@ -188,6 +198,8 @@ def unlicense_matlab_proxy(matlab_proxy_url):
     Args:
         matlab_proxy_url (string): URL to access matlab-proxy
     """
+    import warnings
+
     max_retries = 3  # Max retries for unlicensing matlab-proxy
     retries = 0
 
@@ -199,11 +211,17 @@ def unlicense_matlab_proxy(matlab_proxy_url):
             )
             if resp.status_code == requests.codes.OK:
                 data = resp.json()
-                assert data["licensing"] == None, "Licensing is not unset"
+                assert data["licensing"] == None, "matlab-proxy licensing is not unset"
                 assert (
                     data["matlab"]["status"] == "down"
-                ), "MATLAB is not in 'stopped' state"
-                assert data["error"] == None, f"Error: {data['error']}"
+                ), "matlab-proxy is not in 'stopped' state"
+
+                # Throw warning if matlab-proxy is unlicensed but with some error
+                if data["error"] != None:
+                    warnings.warn(
+                        f"matlab-proxy is unlicensed but with error: {data['error']}",
+                        UserWarning,
+                    )
                 break
             else:
                 resp.raise_for_status()

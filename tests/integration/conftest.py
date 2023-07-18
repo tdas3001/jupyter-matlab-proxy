@@ -8,9 +8,10 @@ import requests
 @pytest.fixture(autouse=True, scope="module")
 def monkeypatch_module_scope(request):
     """
-    Pytest fixture for creating a monkeypatch object in module scope.
+    Pytest fixture for creating a monkeypatch object in 'module' scope.
     The default monkeypatch fixture returns monkeypatch object in
-    function scope.
+    'function' scope but a 'module' scope object is needed with matlab-proxy
+    'module' scope fixture.
 
     Args:
         request (fixture): built-in pytest fixture
@@ -49,6 +50,9 @@ def matlab_proxy_fixture(monkeypatch_module_scope):
     # Select a random free port to serve matlab-proxy for testing
     mwi_app_port = integration_test_utils.get_random_free_port()
     mwi_base_url = "/matlab-test"
+
+    # '127.0.0.1' is used instead 'localhost' for testing since Windows machines consume
+    # some time to resolve 'localhost' hostname
     matlab_proxy_url = f"http://127.0.0.1:{mwi_app_port}{mwi_base_url}"
 
     # Start matlab-proxy-app for testing
@@ -63,6 +67,7 @@ def matlab_proxy_fixture(monkeypatch_module_scope):
     # Get event loop to start matlab-proxy in background
     loop = matlab_proxy.util.get_event_loop()
 
+    # Run matlab-proxy in the background in an event loop
     proc = loop.run_until_complete(
         integration_test_utils.start_matlab_proxy_app(input_env=input_env)
     )
