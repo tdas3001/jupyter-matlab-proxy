@@ -1,10 +1,10 @@
 # Testing Information for jupyter-matlab-proxy
 
-The tests in this project are written using the [Pytest](https://docs.pytest.org/en/latest/) framework.
+The tests in this project are written using the [Pytest](https://docs.pytest.org/en/latest/) and [Unittest](https://docs.python.org/3/library/unittest.html) frameworks.
 
 To run the tests in this project follow these steps:
-* From the root directory of this project, run the command `pip install ".[dev]"`
-* Run the command `pytest` to run all Python tests for this project.
+* From the root directory of this project, run the command `python3 -m pip install ".[dev]"`
+* Run the command `python3 -m pytest` to run all Python tests for this project.
 
 ## Integration testing with real MATLAB in the loop
 
@@ -12,20 +12,19 @@ These tests validate if the Jupyter Notebook Integration works well in presence 
 
 ### Test Requirements
 1. MATLAB (Version >= `R2020b`) in the system path
-2. `pytest` and `jupyter-kernel-test` python packages
-3. `Node.js` version >= 16.x
-4. Run the following commands from `<project_root_directory>/tests/integration/configuration` location in the terminal:
+2. MATLAB Proxy should be unlicensed
+3. Run the following commands from the root directory of the project:
     ```
-    npm ci
-    npx playwright install
+    python3 -m pip install .[dev]
+    python3 -m playwright install --with-deps
     ```
-5. MATLAB Proxy requirements
-6. Jupyter MATLAB Proxy requirements
+4. MATLAB Proxy requirements
+5. Jupyter MATLAB Proxy requirements
 
 ### How to run
-* Run the following command from `<project_root_directory>` location in the terminal:
+* Run the following command from the root directory of the project:
     ```
-    pytest tests/integration
+    python3 -m pytest tests/integration
     ```
 
 ### Test Suite Setup
@@ -45,6 +44,6 @@ After the test execution ends, matlab-proxy is unlicensed, the corresponding pro
 
 ----
 
-Copyright (c) 2023 The MathWorks, Inc. All rights reserved.
+Copyright 2023 The Mathworks, Inc.
 
 ----
