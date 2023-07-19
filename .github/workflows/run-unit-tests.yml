@@ -11,7 +11,7 @@ on:
 jobs:
   python_unit_tests:
     env:
-      code-cov-py: "3.10"
+      code-cov-py: "3.11"
     strategy:
       fail-fast: false
       matrix:
