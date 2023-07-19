@@ -19,17 +19,13 @@ def monkeypatch_module_scope(request):
     Yields:
         class object: Object of class MonkeyPatch
     """
-    # Importing monkeypatch here to avoid importing it at the module level
-    from _pytest.monkeypatch import MonkeyPatch
+    with pytest.MonkeyPatch.context() as mp:
+        yield mp
 
-    monkeypatch = MonkeyPatch()
+        def fin():
+            mp.undo()
 
-    yield monkeypatch
-
-    def fin():
-        monkeypatch.undo()
-
-    request.addfinalizer(fin)
+        request.addfinalizer(fin)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -97,11 +93,10 @@ def __setup_matlab_proxy(matlab_proxy_url):
     Args:
         matlab_proxy_url (string): URL to access matlab-proxy
     """
-    import polling
 
     # Poll for matlab-proxy URL to respond
-    polling.poll(
-        lambda: requests.get(matlab_proxy_url, verify=False).status_code == 200,
+    integration_test_utils.poll_web_service(
+        matlab_proxy_url,
         step=5,
         timeout=120,
         ignore_exceptions=(
@@ -113,7 +108,7 @@ def __setup_matlab_proxy(matlab_proxy_url):
     integration_test_utils.license_matlab_proxy(matlab_proxy_url)
 
     # Wait for matlab-proxy to be up and running
-    integration_test_utils.wait_matlab_proxy_up(matlab_proxy_url)
+    integration_test_utils.wait_matlab_proxy_ready(matlab_proxy_url)
 
 
 def __teardown_matlab_proxy(matlab_proxy_url):

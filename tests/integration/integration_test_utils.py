@@ -73,7 +73,7 @@ async def start_matlab_proxy_app(input_env={}):
     return proc
 
 
-def wait_matlab_proxy_up(matlab_proxy_url):
+def wait_matlab_proxy_ready(matlab_proxy_url):
     """
     Wait for matlab-proxy to be up and running
 
@@ -233,3 +233,40 @@ def unlicense_matlab_proxy(matlab_proxy_url):
     # If the above code threw error even after maximum retries, then raise error
     if error:
         raise error
+
+
+def poll_web_service(url, step=1, timeout=60, ignore_exceptions=None):
+    """Poll a web service for a 200 response
+
+    Args:
+        url (string): URL of the web service
+        step (int, optional): Poll Interval. Defaults to 1 second.
+        timeout (int, optional): Polling timout. Defaults to 60 seconds.
+        ignore_exceptions (tuple, optional): The exceptions that need to be ignored
+        within the polling timout. Defaults to None.
+
+    Raises:
+        TimeoutError: Error if polling timeout is exceeded
+
+    Returns:
+        dict: response dictionary object
+    """
+    start_time = time.time()
+    end_time = start_time + timeout
+
+    while time.time() < end_time:
+        try:
+            response = requests.get(url, verify=False)
+            if response.status_code == 200:
+                return response
+
+        except Exception as e:
+            if ignore_exceptions and isinstance(e, ignore_exceptions):
+                continue  # Ignore specified exceptions
+        print("non 200 response found, waiting before polling again")
+        time.sleep(step)
+        print("retrying...")
+
+    raise TimeoutError(
+        f"{url} did not return a 200 response within the timeout period."
+    )

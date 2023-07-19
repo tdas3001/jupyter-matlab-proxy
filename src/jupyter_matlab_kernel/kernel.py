@@ -52,8 +52,6 @@ def start_matlab_proxy_for_testing():
             base_url (string): Complete base url for matlab-proxy obtained from tests
             headers (dict): Empty dictionary
     """
-    # Only used for testing purposes. Gets the matlab-proxy server configuration
-    # from environment variables (set by tests) and mocks the 'start_matlab_proxy' function
 
     import matlab_proxy.util.mwi.environment_variables as mwi_env
 
@@ -76,8 +74,6 @@ def start_matlab_proxy():
     Start matlab-proxy registered with the jupyter server which started the
     current kernel process.
 
-    Args:
-        test (bool): If testing mode is enabled
     Raises:
         MATLABConnectionError: Occurs when kernel is not started by jupyter server.
         HTTPError: Occurs when kernel cannot connect with matlab-proxy.
