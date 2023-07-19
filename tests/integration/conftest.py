@@ -22,11 +22,6 @@ def monkeypatch_module_scope(request):
     with pytest.MonkeyPatch.context() as mp:
         yield mp
 
-        def fin():
-            mp.undo()
-
-        request.addfinalizer(fin)
-
 
 @pytest.fixture(autouse=True, scope="module")
 def matlab_proxy_fixture(monkeypatch_module_scope):

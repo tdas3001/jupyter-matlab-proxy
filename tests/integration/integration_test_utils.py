@@ -92,7 +92,6 @@ def wait_matlab_proxy_ready(matlab_proxy_url):
 
     is_matlab_licensed = False
     matlab_status = "down"
-    matlab_proxy_has_error = None
     start_time = time.time()
 
     # Poll for matlab-proxy to be up
@@ -104,7 +103,7 @@ def wait_matlab_proxy_ready(matlab_proxy_url):
             (
                 is_matlab_licensed,
                 matlab_status,
-                matlab_proxy_has_error,
+                _,
             ) = mwi_comm_helpers.fetch_matlab_proxy_status(
                 url=matlab_proxy_url, headers={}
             )
@@ -116,7 +115,7 @@ def wait_matlab_proxy_ready(matlab_proxy_url):
     assert is_matlab_licensed == True, "MATLAB is not licensed"
     assert (
         matlab_status == "up"
-    ), f"matlab-proxy process did not start successfully\nError:\n{matlab_proxy_has_error}"
+    ), f"matlab-proxy process did not start successfully\nMATLAB Status is '{matlab_status}'"
 
 
 def get_random_free_port() -> str:
@@ -263,9 +262,7 @@ def poll_web_service(url, step=1, timeout=60, ignore_exceptions=None):
         except Exception as e:
             if ignore_exceptions and isinstance(e, ignore_exceptions):
                 continue  # Ignore specified exceptions
-        print("non 200 response found, waiting before polling again")
         time.sleep(step)
-        print("retrying...")
 
     raise TimeoutError(
         f"{url} did not return a 200 response within the timeout period."
