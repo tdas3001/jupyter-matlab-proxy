@@ -265,5 +265,5 @@ def poll_web_service(url, step=1, timeout=60, ignore_exceptions=None):
         time.sleep(step)
 
     raise TimeoutError(
-        f"{url} did not return a 200 response within the timeout period."
+        f"{url} did not return a 200 response within the timeout period {timeout} seconds."
     )

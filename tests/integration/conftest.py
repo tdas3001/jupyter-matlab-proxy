@@ -7,8 +7,8 @@ import pytest
 import requests
 
 
-@pytest.fixture(scope="module")
-def monkeypatch_module_scope():
+@pytest.fixture(scope="module", name="module_monkeypatch")
+def monkeypatch_module_scope_fixture():
     """
     Pytest fixture for creating a monkeypatch object in 'module' scope.
     The default monkeypatch fixture returns monkeypatch object in
@@ -23,7 +23,7 @@ def monkeypatch_module_scope():
 
 
 @pytest.fixture(scope="module", autouse=True)
-def matlab_config_cleanup(request):
+def matlab_config_cleanup_fixture(request):
     """
     Cleanup the directory that contains matlab config file
     before and after running the tests. This is done to make sure that
@@ -48,7 +48,7 @@ def matlab_config_cleanup(request):
 
 
 @pytest.fixture(autouse=True, scope="module")
-def matlab_proxy_fixture(monkeypatch_module_scope):
+def matlab_proxy_fixture(module_monkeypatch):
     """
     Pytest fixture for managing a standalone matlab-proxy process
     for testing purposes. This fixture sets up a matlab-proxy process in
@@ -105,7 +105,7 @@ def matlab_proxy_fixture(monkeypatch_module_scope):
     # Update the OS environment variables such as app port, base url etc.
     # so that they can be used by MATLAB Kernel to obtain MATLAB
     for key, value in input_env.items():
-        monkeypatch_module_scope.setenv(key, value)
+        module_monkeypatch.setenv(key, value)
 
     # Run the jupyter kernel tests
     yield
