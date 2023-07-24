@@ -17,6 +17,4 @@ jobs:
   call-integration-tests:
     # Runs integration tests
     uses: ./.github/workflows/run-integration-tests.yml
-    secrets:
-      TEST_USERNAME: ${{secrets.TEST_USERNAME}}
-      TEST_PASSWORD: ${{secrets.TEST_PASSWORD}}
+    secrets: inherit

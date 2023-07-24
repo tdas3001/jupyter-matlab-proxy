@@ -7,13 +7,6 @@ on:
   # Reusable workflow
   # Trigger on workflow call
   workflow_call:
-    secrets:
-      TEST_USERNAME:
-        description: 'MW Username for testing'
-        required: true
-      TEST_PASSWORD:
-        description: 'Password for the MW Username'
-        required: true
 
 jobs:
   python_integration_tests:
